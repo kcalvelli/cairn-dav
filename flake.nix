@@ -45,7 +45,8 @@
       # Overlay for custom packages
       overlays.default = final: prev: {
         mcp-dav =
-          self.packages.${prev.system}.mcp-dav or (throw "mcp-dav not available for ${prev.system}");
+          self.packages.${prev.stdenv.hostPlatform.system}.mcp-dav
+            or (throw "mcp-dav not available for ${prev.stdenv.hostPlatform.system}");
       };
 
       # Per-system outputs (packages, devShells)
@@ -55,10 +56,13 @@
           pkgs = import nixpkgs {
             inherit system;
             overlays = [
-              # fastmcp tests hang indefinitely in nix sandbox (async/network deadlock)
+              # fastmcp tests hang indefinitely in nix sandbox (async/network deadlock),
+              # and fastmcp 3.x is marked broken against mcp >= 2 — pin it to mcp_1
+              # until upstream catches up.
               (_final: prev: {
                 pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
-                  (_pyFinal: pyPrev: {
+                  (pyFinal: pyPrev: {
+                    fastmcp-slim = pyPrev.fastmcp-slim.override { mcp = pyFinal.mcp_1; };
                     fastmcp = pyPrev.fastmcp.overrideAttrs { doInstallCheck = false; };
                   })
                 ];
